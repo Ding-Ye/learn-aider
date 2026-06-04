@@ -27,7 +27,7 @@ streaming → end-to-end integration.
 
 | Chapter | Title | Status |
 |---------|-------|--------|
-| s01 | [The minimum coder loop](docs/zh/s01-minimum-coder-loop.md) | ✅ |
+| s01 | [The minimum coder loop](docs/en/s01-minimum-coder-loop.md) | ✅ |
 | s02 | [Whole-file edit format](docs/en/s02-wholefile-format.md) | ✅ |
 | s03 | [Search/replace edit blocks](docs/en/s03-editblock-searchreplace.md) | ✅ |
 | s04 | [Unified diff edit format](docs/en/s04-unified-diff-format.md) | ✅ |
