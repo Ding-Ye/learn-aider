@@ -1,3 +1,14 @@
 go 1.23
 
-use ./agents/s01-minimum-coder-loop
+use (
+	./agents/s01-minimum-coder-loop
+	./agents/s02-wholefile-format
+	./agents/s03-editblock-searchreplace
+	./agents/s04-unified-diff-format
+	./agents/s05-prompt-system
+	./agents/s06-inputoutput-commands
+	./agents/s07-gitrepo-autocommit
+	./agents/s08-repomap-pagerank
+	./agents/s09-linter-reflection
+	./agents/s10-provider-config-retries
+)

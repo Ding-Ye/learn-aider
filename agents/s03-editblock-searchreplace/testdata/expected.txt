@@ -1,0 +1,96 @@
+# Example transcript: running s03 on a sample file.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture — the LLM reply is
+# non-deterministic, so what matters is the SHAPE: one round-trip, the model
+# emits SEARCH/REPLACE blocks, and s03 applies them surgically. The tests in
+# editblock_test.go pin the deterministic parts (parsing + the tiered matcher)
+# with a fakeProvider; this file shows a learner what a real run looks like.
+
+# ---------------------------------------------------------------------------
+# 0. Set up a sample file to edit.
+# ---------------------------------------------------------------------------
+$ cat > /tmp/greet.go <<'EOF'
+package main
+
+import "fmt"
+
+func greet() string {
+	return "hello"
+}
+
+func main() {
+	fmt.Println(greet())
+}
+EOF
+
+# ---------------------------------------------------------------------------
+# 1. Run s03 with -v so we can see the request/response shape.
+#    (ANTHROPIC_API_KEY must be set; or use -provider deepseek etc.)
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v -root /tmp greet.go "change the greeting to 'hi there'"
+
+# --- stderr (the -v trace) ---
+[s03] provider=anthropic model=claude-sonnet-4-6 url=
+[s03] sending 118 bytes of greet.go + instruction "change the greeting to 'hi there'"
+[s03] stop_reason=end_turn in=611 out=64 tokens
+
+# --- the model's reply (shown here for illustration; s03 parses it) ---
+# greet.go
+# <<<<<<< SEARCH
+# 	return "hello"
+# =======
+# 	return "hi there"
+# >>>>>>> REPLACE
+
+# --- stdout ---
+Applied edit to greet.go
+
+# ---------------------------------------------------------------------------
+# 2. Only the matched lines changed; everything else is preserved verbatim.
+#    (Contrast s02, where the model had to re-emit the WHOLE file.)
+# ---------------------------------------------------------------------------
+$ cat /tmp/greet.go
+package main
+
+import "fmt"
+
+func greet() string {
+	return "hi there"
+}
+
+func main() {
+	fmt.Println(greet())
+}
+
+# ---------------------------------------------------------------------------
+# 3. Fuzzy-match shape: even if the model reproduces the SEARCH line at the
+#    wrong indentation (e.g. no leading tab), the whitespace-tolerant tier
+#    still locates it and preserves the file's real indent. So this kind of
+#    reply also applies cleanly:
+#
+#      greet.go
+#      <<<<<<< SEARCH
+#      return "hi there"          <- note: model dropped the leading tab
+#      =======
+#      return "hey"
+#      >>>>>>> REPLACE
+#
+#    -> still "Applied edit to greet.go", body re-indented with the file's tab.
+
+# ---------------------------------------------------------------------------
+# 4. Failure shape: if the SEARCH text matches nothing in the file, s03 leaves
+#    the file untouched, reports the miss, and exits non-zero. Upstream turns
+#    this into a reflected_message asking the model to retry (our s09); s03
+#    just reports it.
+# ---------------------------------------------------------------------------
+$ go run . -root /tmp greet.go "rename a function that does not exist"
+FAILED to match SEARCH in greet.go (file left untouched)
+coder error: 1 of 1 edits did not match
+exit status 1
+
+# ---------------------------------------------------------------------------
+# 5. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s03	0.5s

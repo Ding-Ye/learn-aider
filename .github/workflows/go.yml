@@ -21,6 +21,15 @@ jobs:
       matrix:
         session:
           - s01-minimum-coder-loop
+          - s02-wholefile-format
+          - s03-editblock-searchreplace
+          - s04-unified-diff-format
+          - s05-prompt-system
+          - s06-inputoutput-commands
+          - s07-gitrepo-autocommit
+          - s08-repomap-pagerank
+          - s09-linter-reflection
+          - s10-provider-config-retries
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

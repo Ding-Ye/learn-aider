@@ -28,15 +28,15 @@ streaming → end-to-end integration.
 | Chapter | Title | Status |
 |---------|-------|--------|
 | s01 | [The minimum coder loop](docs/zh/s01-minimum-coder-loop.md) | ✅ |
-| s02 | Whole-file edit format | ⏳ |
-| s03 | Search/replace edit blocks | ⏳ |
-| s04 | Unified diff edit format | ⏳ |
-| s05 | Per-format prompt system | ⏳ |
-| s06 | InputOutput layer + in-chat commands | ⏳ |
-| s07 | GitRepo integration + auto-commit | ⏳ |
-| s08 | RepoMap (tags + PageRank under token budget) | ⏳ |
-| s09 | Linter + reflection loop | ⏳ |
-| s10 | Model/provider config + retries/streaming | ⏳ |
+| s02 | [Whole-file edit format](docs/en/s02-wholefile-format.md) | ✅ |
+| s03 | [Search/replace edit blocks](docs/en/s03-editblock-searchreplace.md) | ✅ |
+| s04 | [Unified diff edit format](docs/en/s04-unified-diff-format.md) | ✅ |
+| s05 | [Per-format prompt system](docs/en/s05-prompt-system.md) | ✅ |
+| s06 | [InputOutput layer + in-chat commands](docs/en/s06-inputoutput-commands.md) | ✅ |
+| s07 | [GitRepo integration + auto-commit](docs/en/s07-gitrepo-autocommit.md) | ✅ |
+| s08 | [RepoMap (tags + PageRank under token budget)](docs/en/s08-repomap-pagerank.md) | ✅ |
+| s09 | [Linter + reflection loop](docs/en/s09-linter-reflection.md) | ✅ |
+| s10 | [Model/provider config + retries/streaming](docs/en/s10-provider-config-retries.md) | ✅ |
 | s_full | Integration: end-to-end mini-aider | ⏳ |
 | A | Appendix A · RepoMap PageRank intuition | ⏳ |
 | B | Appendix B · Upstream file map | ⏳ |

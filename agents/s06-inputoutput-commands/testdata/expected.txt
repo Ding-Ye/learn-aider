@@ -1,0 +1,63 @@
+# Example transcript: running s06.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture. There is NO LLM call in
+# this chapter — the mechanism is the I/O + command layer itself — so this whole
+# transcript IS deterministic. The deterministic tests (which DO run in CI) live
+# in io_test.go and commands_test.go.
+
+# ---------------------------------------------------------------------------
+# Drive the REPL by piping commands on stdin. Lines starting with "/" are
+# slash commands handled locally; anything else is a chat message forwarded to
+# the coder stub. The prompt prefix ("diff> ") carries the edit format, exactly
+# like upstream get_input (io.py L545-552).
+# ---------------------------------------------------------------------------
+$ printf '/help\n/add main.go\n/ls\nplease rename foo to bar\n/drop main.go\n/frobnicate\n/quit\n' | go run .
+[s06] interactive shell. Lines starting with / are commands; anything else is a chat message. Try /help, /add, /ls, /quit, or Ctrl-D to exit.
+diff> Available commands:
+  /add   Add a file to the chat so it can be edited
+  /diff  Show a (stubbed) diff of the in-chat files
+  /drop  Remove a file from the chat to free context
+  /help  List the available commands
+  /ls    List repo files and mark which are in the chat
+
+# /add mutates the in-chat file set (upstream cmd_add L799). It NEVER hits the
+# network — this is the whole reason commands are intercepted before the coder.
+diff> Added main.go to the chat
+
+# /ls now reflects that mutated state: main.go has moved into "Files in chat",
+# the rest of the repo universe stays under "not in the chat" (cmd_ls L1064).
+diff> Repo files not in the chat:
+  README.md
+  util.go
+Files in chat:
+  main.go
+
+# A PLAIN line (no leading "/") is NOT a command, so ParseAndRun returns
+# handled=false and the loop forwards it to the coder. The coder stub reports the
+# scope it WOULD send (1 file in chat). A real build assembles those files +
+# message into a CreateMessageRequest here; s06 stops at the boundary.
+diff> [coder] would send to the LLM with 1 file(s) in chat: "please rename foo to bar"
+
+# /drop reverses /add (cmd_drop L912).
+diff> Removed main.go from the chat
+
+# An unknown command is reported as an error and is still "handled" — a typo'd
+# command is NOT silently sent to the LLM (upstream run L332 / do_run L291-293).
+diff> Invalid command: /frobnicate (try /help)
+
+# /quit ends the loop (upstream cmd_exit). Ctrl-D (EOF) does the same.
+diff> Bye.
+
+# ---------------------------------------------------------------------------
+# Other things to try:
+#   go run . -files a.go,b.go,c.go   # seed a different repo file universe
+#   go run . -format whole           # prompt prefix becomes "whole> "
+#   go run . -yes                    # auto-answer every confirmation as yes
+#   echo "/add nope.go" | go run .   # /add on an unknown file asks to create it
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# The deterministic tests (these run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s06	0.3s

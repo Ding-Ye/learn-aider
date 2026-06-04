@@ -1,0 +1,84 @@
+# Example transcript: running s09.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture. The LINT-mode output
+# (the report the loop would reflect back) is deterministic for a given file and
+# is essentially what the tests pin. The RUN-mode behaviour depends on a live
+# LLM, so for that part what matters is the SHAPE: a broken edit gets caught,
+# fed back, and fixed within the reflection cap.
+
+# ---------------------------------------------------------------------------
+# 0. LINT mode (no network, no API key): run just the Linter over a broken Go
+#    file and print exactly what the loop would hand back to the model. The
+#    built-in checker is `gofmt -l -e`.
+# ---------------------------------------------------------------------------
+$ cat broken.go
+package main
+
+func main() {
+    x :=
+}
+
+$ go run . -lint broken.go
+# Fix any errors below, if possible.
+
+## Running: gofmt broken.go
+
+broken.go:4:9: expected operand, found '}'
+
+# --- stderr ---
+[s09] ^ in RUN mode this exact text becomes a synthetic user message,
+      handed back to the model so it can fix the code.
+
+# ---------------------------------------------------------------------------
+# 1. LINT a clean file: nothing to reflect, exit 0.
+# ---------------------------------------------------------------------------
+$ go run . -lint provider.go
+lint clean: nothing to reflect
+
+# ---------------------------------------------------------------------------
+# 2. RUN mode: ask the model to edit a file. The whole-file Coder writes the
+#    reply; the Linter checks it; a clean result stops after the first pass.
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v -file calc.go -instruction "add a Divide(a, b int) int function"
+
+# --- stderr (the -v trace) ---
+[s09] provider=anthropic model=claude-sonnet-4-6 file=calc.go max-reflections=3
+[s09] clean on the first try — no reflection needed.
+
+# --- stdout ---
+applied 1 edit(s) to calc.go across 1 pass(es)
+
+# ---------------------------------------------------------------------------
+# 3. RUN mode where the model's first edit does NOT compile. The reflection
+#    loop catches it, feeds the gofmt error back, and the model fixes it on the
+#    second pass. The interesting line is "converged after 1 reflection(s)".
+# ---------------------------------------------------------------------------
+$ go run . -v -file calc.go -instruction "add a function with a deliberate typo, then fix it"
+
+# --- stderr ---
+[s09] provider=anthropic model=claude-sonnet-4-6 file=calc.go max-reflections=3
+[s09] converged after 1 reflection(s) — lint is now clean.
+
+# --- stdout ---
+applied 2 edit(s) to calc.go across 2 pass(es)
+
+# ---------------------------------------------------------------------------
+# 4. If the model never converges, the loop stops at the cap rather than
+#    looping forever (here -max-reflections 2). The still-broken lint report is
+#    printed so a human can take over.
+# ---------------------------------------------------------------------------
+$ go run . -file calc.go -instruction "..." -max-reflections 2
+[s09] stopped after 2 reflection(s): cap reached, still not clean:
+# Fix any errors below, if possible.
+
+## Running: gofmt calc.go
+
+calc.go:7:1: expected declaration, found '}'
+applied 3 edit(s) to calc.go across 3 pass(es)
+
+# ---------------------------------------------------------------------------
+# 5. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s09	0.5s

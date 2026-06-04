@@ -18,3 +18,6 @@ npm-debug.log*
 # OS / editor
 .DS_Store
 *.swp
+
+# compiled per-session Go binaries (named after module path last element, e.g. s02)
+agents/*/s[0-9][0-9]

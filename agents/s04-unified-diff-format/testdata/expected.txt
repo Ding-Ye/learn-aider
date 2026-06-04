@@ -1,0 +1,105 @@
+# Example transcript: running s04 on a sample file.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture — the LLM reply is
+# non-deterministic, so what matters is the SHAPE: one round-trip, the model
+# emits a ```diff block, and s04 applies the hunks by locating their context.
+# The tests in udiff_test.go pin the deterministic parts (parsing + the context
+# matcher) with a fakeProvider; this file shows a learner what a real run looks
+# like.
+
+# ---------------------------------------------------------------------------
+# 0. Set up a sample file to edit.
+# ---------------------------------------------------------------------------
+$ cat > /tmp/greet.go <<'EOF'
+package main
+
+import "fmt"
+
+func greet() string {
+	return "hello"
+}
+
+func main() {
+	fmt.Println(greet())
+}
+EOF
+
+# ---------------------------------------------------------------------------
+# 1. Run s04 with -v so we can see the request/response shape.
+#    (ANTHROPIC_API_KEY must be set; or use -provider deepseek etc.)
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v -root /tmp greet.go "change the greeting to 'hi there'"
+
+# --- stderr (the -v trace) ---
+[s04] provider=anthropic model=claude-sonnet-4-6 url=
+[s04] sending 118 bytes of greet.go + instruction "change the greeting to 'hi there'"
+[s04] stop_reason=end_turn in=611 out=72 tokens
+
+# --- the model's reply (shown here for illustration; s04 parses it) ---
+# ```diff
+# --- a/greet.go
+# +++ b/greet.go
+# @@ -5,3 +5,3 @@
+#  func greet() string {
+# -	return "hello"
+# +	return "hi there"
+#  }
+# ```
+
+# --- stdout ---
+Applied hunk to greet.go
+
+# ---------------------------------------------------------------------------
+# 2. Only the matched lines changed; everything else is preserved verbatim.
+#    The hunk was located by its CONTEXT lines (" func greet() string {" and
+#    " }"), NOT by the "@@ -5,3 +5,3 @@" numbers — those are ignored.
+# ---------------------------------------------------------------------------
+$ cat /tmp/greet.go
+package main
+
+import "fmt"
+
+func greet() string {
+	return "hi there"
+}
+
+func main() {
+	fmt.Println(greet())
+}
+
+# ---------------------------------------------------------------------------
+# 3. Context-flexibility shape: even if the model quotes the context lines at
+#    the wrong indentation (e.g. drops a leading tab), the whitespace-tolerant
+#    tier (inherited from s03) still locates the hunk and preserves the file's
+#    real indent. And the @@ numbers can be totally bogus — "@@ ... @@" is fine
+#    — because we never read them. So this kind of reply also applies cleanly:
+#
+#      ```diff
+#      --- a/greet.go
+#      +++ b/greet.go
+#      @@ ... @@
+#      func greet() string {        <- model dropped the leading whitespace
+#      -return "hi there"
+#      +return "hey"
+#      }
+#      ```
+#
+#    -> still "Applied hunk to greet.go".
+
+# ---------------------------------------------------------------------------
+# 4. Failure shape: if a hunk's context matches nothing in the file, s04 leaves
+#    the file untouched, reports the miss, and exits non-zero. Upstream turns
+#    this into a reflected_message asking the model to retry with corrected
+#    context (our s09); s04 just reports it.
+# ---------------------------------------------------------------------------
+$ go run . -root /tmp greet.go "edit a function that does not exist"
+FAILED to apply hunk to greet.go — its context did not match (file left untouched)
+coder error: 1 of 1 hunks did not apply
+exit status 1
+
+# ---------------------------------------------------------------------------
+# 5. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s04	0.5s

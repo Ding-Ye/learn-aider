@@ -1,0 +1,104 @@
+# Example transcript: running s07 (GitRepo + auto-commit).
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture. SHAs are random, so the
+# exact "committed <sha>" hash differs every run; what the tests pin is the
+# BEHAVIOR (one new commit, the message, the author attribution, the no-empty-
+# commit guard). For a hand run, what matters is the SHAPE shown below.
+
+# ---------------------------------------------------------------------------
+# 0. Set up a throwaway git repo to play in. (The tests do this automatically
+#    with t.TempDir(); here we do it by hand.)
+# ---------------------------------------------------------------------------
+$ mkdir /tmp/demo && cd /tmp/demo && git init -q
+$ git config user.name "Ada Lovelace"
+$ git config user.email "ada@example.com"
+$ printf 'package main\n\nfunc main() {}\n' > app.go
+$ git add app.go && git commit -q -m "initial"
+
+# ---------------------------------------------------------------------------
+# 1. Apply a whole-file edit and AUTO-COMMIT it. No network, no API key.
+#    This is the core demo: edit -> commit -> new sha, all in one command.
+# ---------------------------------------------------------------------------
+$ go run /path/to/agents/s07-gitrepo-autocommit \
+      -repo /tmp/demo -file app.go \
+      -content 'package main
+
+import "fmt"
+
+func main() { fmt.Println("hello from aider") }
+' -m "print a greeting" -v
+[s07] repo root: /tmp/demo
+[s07] wrote 78 bytes to app.go
+[s07] committed a1b2c3d: print a greeting
+committed a1b2c3d
+
+# The edit is now an atomic, attributed git commit. Inspect it like any other:
+$ git log --oneline -1
+a1b2c3d print a greeting
+$ git log -1 --pretty='%an <%ae>'
+Ada Lovelace (aider) <ada@example.com>
+#                ^^^^^^^ author NAME rewritten to mark this as aider's work
+#                        (the email is untouched — only the display name).
+
+# Undo it the aider way — the commit IS the undo buffer:
+$ git reset --hard HEAD~1     # this is what aider's /undo runs
+
+# ---------------------------------------------------------------------------
+# 2. Re-running with NO actual change is a no-op. aider never makes empty
+#    "noise" commits, so a clean tree just reports and skips.
+# ---------------------------------------------------------------------------
+$ go run /path/to/agents/s07-gitrepo-autocommit \
+      -repo /tmp/demo -file app.go -content "$(cat app.go)" -v
+[s07] repo root: /tmp/demo
+[s07] wrote 78 bytes to app.go
+[s07] no changes to commit (clean tree) — skipping
+committed (no commit: nothing changed)
+
+# ---------------------------------------------------------------------------
+# 3. The kinder-to-blame attribution: keep the human as author, tag the model
+#    in a Co-authored-by trailer instead of rewriting the name.
+# ---------------------------------------------------------------------------
+$ printf '// touched\n' >> app.go
+$ go run /path/to/agents/s07-gitrepo-autocommit \
+      -repo /tmp/demo -file app.go -content "$(cat app.go)" \
+      -m "add a comment" -co-authored-by -model claude-sonnet-4-6
+committed e4f5a6b
+$ git log -1 --pretty='%B'
+add a comment
+
+Co-authored-by: aider (claude-sonnet-4-6) <aider@aider.chat>
+$ git log -1 --pretty='%an'
+Ada Lovelace
+#             ^ author NAME is the human now; the trailer credits the model.
+
+# ---------------------------------------------------------------------------
+# 4. RUN mode (optional, needs a key): let a model produce the new contents,
+#    then auto-commit them. The reply is non-deterministic; the commit step is
+#    identical to the offline demos above.
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run /path/to/agents/s07-gitrepo-autocommit \
+      -repo /tmp/demo -file app.go \
+      -instruction "rename the greeting to 'hi there'" -v
+[s07] repo root: /tmp/demo
+[s07] asking claude-sonnet-4-6 for new contents of app.go
+[s07] wrote 81 bytes to app.go
+[s07] committed 7c8d9e0: edit app.go
+committed 7c8d9e0
+
+# ---------------------------------------------------------------------------
+# 5. The tests (no network — they drive real git in a temp repo).
+# ---------------------------------------------------------------------------
+$ go test -v ./...
+=== RUN   TestCommitCreatesOneCommit
+--- PASS: TestCommitCreatesOneCommit
+=== RUN   TestCommitMessageRecorded
+--- PASS: TestCommitMessageRecorded
+=== RUN   TestCommitAttributionAuthor
+--- PASS: TestCommitAttributionAuthor
+=== RUN   TestNoEmptyCommitAndIsDirty
+--- PASS: TestNoEmptyCommitAndIsDirty
+=== RUN   TestTrackedFilesAndRootFromSubdir
+--- PASS: TestTrackedFilesAndRootFromSubdir
+PASS
+ok  	learn-aider/s07

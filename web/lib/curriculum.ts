@@ -22,19 +22,19 @@ export const CURRICULUM: ChapterMeta[] = [
     slug: "s02-wholefile-format",
     num: "s02",
     title: { zh: "整文件编辑格式", en: "Whole-file edit format" },
-    available: false,
+    available: true,
   },
   {
     slug: "s03-editblock-searchreplace",
     num: "s03",
     title: { zh: "搜索/替换编辑块", en: "Search/replace edit blocks" },
-    available: false,
+    available: true,
   },
   {
     slug: "s04-unified-diff-format",
     num: "s04",
     title: { zh: "统一 diff 格式", en: "Unified diff edit format" },
-    available: false,
+    available: true,
   },
   {
     slug: "s05-prompt-system",
@@ -43,7 +43,7 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "按格式定制的提示系统",
       en: "Per-format prompt system",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "s06-inputoutput-commands",
@@ -52,13 +52,13 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "终端 I/O 与对话内命令",
       en: "InputOutput layer + in-chat commands",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "s07-gitrepo-autocommit",
     num: "s07",
     title: { zh: "Git 集成与自动提交", en: "GitRepo integration + auto-commit" },
-    available: false,
+    available: true,
   },
   {
     slug: "s08-repomap-pagerank",
@@ -67,13 +67,13 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "RepoMap：tree-sitter 标签 + PageRank",
       en: "RepoMap (tags + PageRank under token budget)",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "s09-linter-reflection",
     num: "s09",
     title: { zh: "检查器与反思循环", en: "Linter + reflection loop" },
-    available: false,
+    available: true,
   },
   {
     slug: "s10-provider-config-retries",
@@ -82,7 +82,7 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "模型/提供方抽象与重试流式",
       en: "Model/provider config + retries/streaming",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "s_full-integration",

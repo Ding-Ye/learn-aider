@@ -1,0 +1,45 @@
+# Illustrative transcript for s02 (whole-file edit format).
+#
+# LLM output is non-deterministic, so this shows the SHAPE of a run, not a
+# byte-exact reproduction. Reproduce locally with:
+#
+#   cd agents/s02-wholefile-format
+#   export ANTHROPIC_API_KEY=sk-ant-...
+#   go run . -v main.go util.go "move the parser into util.go"
+
+# ---- what the model receives (system prompt, abridged) ----
+You are a coding assistant that edits whole files.
+To change a file, output its path on its own line, then the ENTIRE new contents
+of that file inside a single fenced code block. You may edit MULTIPLE files ...
+
+# ---- what the model replies with (the whole-file format) ----
+I moved the parser into util.go and called it from main.go.
+
+main.go
+```go
+package main
+
+func main() { parse() }
+```
+
+util.go
+```go
+package main
+
+func parse() {}
+```
+
+# ---- stderr, with -v ----
+[s02] provider=anthropic model=claude-sonnet-4-6 files=[main.go util.go]
+[s02] stop_reason=end_turn in=412 out=96 tokens
+
+# ---- stdout ----
+Applied edit to main.go (32 bytes)
+Applied edit to util.go (33 bytes)
+
+# Notes:
+# - TWO files were rewritten from ONE reply; s01 could only do one.
+# - The filename on the line above each fence is how the parser knows the path.
+# - If a reply contains a bare ``` with no filename and you have >1 file in
+#   chat, you'll see: "no filename provided before ``` in reply" and nothing is
+#   written.

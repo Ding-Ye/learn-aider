@@ -24,15 +24,15 @@ PageRank 的 RepoMap → 检查器与反思循环 → 模型/提供方抽象与�
 | 章节 | 标题 | 状态 |
 |------|------|------|
 | s01 | [最小 Coder 循环](docs/zh/s01-minimum-coder-loop.md) | ✅ |
-| s02 | 整文件编辑格式 | ⏳ |
-| s03 | 搜索/替换编辑块 | ⏳ |
-| s04 | 统一 diff 格式 | ⏳ |
-| s05 | 按格式定制的提示系统 | ⏳ |
-| s06 | 终端 I/O 与对话内命令 | ⏳ |
-| s07 | Git 集成与自动提交 | ⏳ |
-| s08 | RepoMap：tree-sitter 标签 + PageRank | ⏳ |
-| s09 | 检查器与反思循环 | ⏳ |
-| s10 | 模型/提供方抽象与重试流式 | ⏳ |
+| s02 | [整文件编辑格式](docs/zh/s02-wholefile-format.md) | ✅ |
+| s03 | [搜索/替换编辑块](docs/zh/s03-editblock-searchreplace.md) | ✅ |
+| s04 | [统一 diff 格式](docs/zh/s04-unified-diff-format.md) | ✅ |
+| s05 | [按格式定制的提示系统](docs/zh/s05-prompt-system.md) | ✅ |
+| s06 | [终端 I/O 与对话内命令](docs/zh/s06-inputoutput-commands.md) | ✅ |
+| s07 | [Git 集成与自动提交](docs/zh/s07-gitrepo-autocommit.md) | ✅ |
+| s08 | [RepoMap：tree-sitter 标签 + PageRank](docs/zh/s08-repomap-pagerank.md) | ✅ |
+| s09 | [检查器与反思循环](docs/zh/s09-linter-reflection.md) | ✅ |
+| s10 | [模型/提供方抽象与重试流式](docs/zh/s10-provider-config-retries.md) | ✅ |
 | s_full | 整合：端到端 mini-aider | ⏳ |
 | A | 附录 A · RepoMap 的 PageRank 直觉 | ⏳ |
 | B | 附录 B · 上游文件地图 | ⏳ |

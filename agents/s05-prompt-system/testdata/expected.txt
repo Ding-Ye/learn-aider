@@ -1,0 +1,128 @@
+# Example transcript: running s05.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture. The INSPECT-mode output
+# (the assembled prompt) IS deterministic and is what the tests pin; the RUN-mode
+# reply from a live LLM is non-deterministic, so for that part what matters is
+# the SHAPE: the model replies in the format the prompt requested.
+
+# ---------------------------------------------------------------------------
+# 0. List the formats that have a prompt set. No network, no API key.
+# ---------------------------------------------------------------------------
+$ go run . -list
+Known edit formats (each has its own prompt set):
+  diff   SEARCH/REPLACE blocks (s03, aider default)
+  udiff  unified diff hunks (s04)
+  whole  return the entire updated file (s02)
+
+# ---------------------------------------------------------------------------
+# 1. INSPECT the SEARCH/REPLACE (diff) system prompt — this is the string that
+#    makes s03's parser have anything to parse. Note: {fence[0]} rendered to
+#    ```, and {final_reminders} rendered to the "lazy" nudge.
+# ---------------------------------------------------------------------------
+$ go run . -format diff
+===== SYSTEM PROMPT (format=diff) =====
+Act as an expert software developer.
+Always use best practices when coding.
+Respect and use existing conventions, libraries, etc that are already present in the code base.
+You are diligent and tireless!
+You NEVER leave comments describing code without implementing it!
+You always COMPLETELY IMPLEMENT the needed code!
+
+Take requests for changes to the supplied code.
+...
+# *SEARCH/REPLACE block* Rules:
+...
+2. The opening fence and code language, eg: ```python
+3. The start of search block: <<<<<<< SEARCH
+...
+7. The end of the replace block: >>>>>>> REPLACE
+8. The closing fence: ```
+...
+
+# ---------------------------------------------------------------------------
+# 2. INSPECT the whole-file prompt + its few-shot examples. The wholefile prompt
+#    has NO SEARCH/REPLACE markers — a different format means a different prompt,
+#    selected by the SAME renderer. The literal `{name}` in the example code
+#    survives substitution (it is NOT a placeholder).
+# ---------------------------------------------------------------------------
+$ go run . -format whole -examples
+===== SYSTEM PROMPT (format=whole) =====
+Act as an expert software developer.
+...
+To suggest changes to a file you MUST return the entire content of the updated file.
+...
+
+===== FEW-SHOT EXAMPLE MESSAGES (format=whole) =====
+
+--- USER ---
+Change the greeting to be more casual
+
+--- ASSISTANT ---
+Ok, I will:
+
+1. Switch the greeting text from "Hello" to "Hey".
+
+show_greeting.py
+```
+import sys
+
+def greeting(name):
+    print(f"Hey {name}")
+
+if __name__ == '__main__':
+    greeting(sys.argv[1])
+```
+
+# ---------------------------------------------------------------------------
+# 3. RUN mode: render the diff prompt and actually call the model once. The
+#    prompt + few-shot examples steer the model to reply with SEARCH/REPLACE
+#    blocks; you'd then feed that reply to s03's GetEdits to apply it.
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v -format diff -file greet.go -instruction "change the greeting to 'hi there'"
+
+# --- stderr (the -v trace) ---
+[s05] format=diff provider=anthropic model=claude-sonnet-4-6
+[s05] system prompt: 1583 bytes, 2 few-shot turns
+[s05] stop_reason=end_turn in=712 out=58 tokens
+
+# --- stdout (the model's reply, in the requested format) ---
+greet.go
+```go
+<<<<<<< SEARCH
+	return "hello"
+=======
+	return "hi there"
+>>>>>>> REPLACE
+```
+
+# --- stderr footer ---
+[s05] ^ the model replied in the format the prompt requested; feed this to the
+      matching s02/s03/s04 parser to apply it.
+
+# ---------------------------------------------------------------------------
+# 4. Switch the format flag to whole, same file/instruction — and the model now
+#    replies with a full file listing instead, because the SELECTED prompt
+#    changed. The loop code did not.
+# ---------------------------------------------------------------------------
+$ go run . -format whole -file greet.go -instruction "change the greeting to 'hi there'"
+greet.go
+```
+package main
+
+import "fmt"
+
+func greet() string {
+	return "hi there"
+}
+
+func main() {
+	fmt.Println(greet())
+}
+```
+
+# ---------------------------------------------------------------------------
+# 5. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s05	0.5s

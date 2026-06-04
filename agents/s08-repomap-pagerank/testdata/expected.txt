@@ -1,0 +1,103 @@
+# Example transcript: running s08 (the RepoMap).
+#
+# This output IS deterministic — there is no LLM call. The repo map is computed
+# entirely locally from the source files (extract tags -> build graph ->
+# PageRank -> fill a token budget). The numbers below come from a tiny 4-file
+# sample repo:
+#
+#   store.go    defines Store, NewStore, Add, Count        (the central type)
+#   cart.go     func Checkout(s *Store) { ... s.Count ... } (references Store)
+#   report.go   func Report(s *Store)   { ... s.Add ...  }  (references Store)
+#   unused.go   func Helper()                               (referenced by nobody)
+
+# ---------------------------------------------------------------------------
+# 1. Verbose mode: SEE the graph and the PageRank scores that drive the map.
+#    Both cart.go and report.go point at store.go (they use its symbols), so
+#    store.go is the most "central" file and earns the highest PageRank.
+# ---------------------------------------------------------------------------
+$ go run . -dir ./sample -tokens 200 -v
+[s08] scanned 4 files under ./sample, budget=200 tokens
+[s08] dependency edges (referencer -> definer  weight):
+    cart.go -> store.go  3.0
+    report.go -> store.go  3.0
+[s08] PageRank (higher = more central):
+    0.4737  store.go
+    0.1754  cart.go
+    0.1754  report.go
+    0.1754  unused.go
+===== REPO MAP (budget=200 tokens, ~45 used) =====
+cart.go:
+  Checkout  (line 3)
+
+report.go:
+  Report  (line 3)
+
+unused.go:
+  Helper  (line 4)
+
+store.go:
+  Add  (line 8)
+  Count  (line 10)
+  NewStore  (line 6)
+  Store  (line 4)
+
+# NOTE: store.go has the highest *file* rank, but that rank is SPLIT across its
+# four exported symbols, so each store.go symbol scores ~0.118 — below the
+# single, unsplit symbols Checkout/Report/Helper (~0.175 each). We rank
+# SYMBOLS, not files, so the lone-symbol files list first. A file whose ONE
+# symbol is used everywhere (see Test 3's Core) concentrates all its rank and
+# rises to the very top.
+
+# ---------------------------------------------------------------------------
+# 2. A tight token budget keeps only the highest-ranked symbols. ~chars/4 is the
+#    (deliberately lossy) token estimate; the budget is a soft cap — we stop
+#    BEFORE exceeding it.
+# ---------------------------------------------------------------------------
+$ go run . -dir ./sample -tokens 20
+===== REPO MAP (budget=20 tokens, ~16 used) =====
+cart.go:
+  Checkout  (line 3)
+
+report.go:
+  Report  (line 3)
+
+# ---------------------------------------------------------------------------
+# 3. Put cart.go "in the chat" (-chat): PageRank's teleport vector concentrates
+#    on cart.go, so what cart.go depends on (store.go) inherits more rank and
+#    the map is reordered toward the code you are working on.
+# ---------------------------------------------------------------------------
+$ go run . -dir ./sample -tokens 200 -chat cart.go
+===== REPO MAP (budget=200 tokens, ~45 used) =====
+cart.go:
+  Checkout  (line 3)
+
+store.go:
+  Add  (line 8)
+  Count  (line 10)
+  NewStore  (line 6)
+  Store  (line 4)
+
+report.go:
+  Report  (line 3)
+
+unused.go:
+  Helper  (line 4)
+
+# ---------------------------------------------------------------------------
+# 4. -as-message shows EXACTLY how the loop (s01..s07) injects the map: a
+#    read-only user turn prepended before the real instruction, so the model can
+#    "see" a repo far too large to paste in full.
+# ---------------------------------------------------------------------------
+$ go run . -dir ./sample -tokens 30 -as-message
+===== READ-ONLY repo-map Message (role=user) =====
+Here are summaries of files in my git repository.
+Do not propose changes to these files, treat them as *read-only*.
+
+cart.go:
+  Checkout  (line 3)
+
+report.go:
+  Report  (line 3)
+
+unused.go:
+  Helper  (line 4)

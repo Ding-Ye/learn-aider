@@ -1,0 +1,84 @@
+# Example transcript: running s10's model/provider config + retry + streaming.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture — the LLM reply is
+# non-deterministic. What matters is the SHAPE: a name resolves to a config, a
+# provider is built + wrapped in retries, and the reply comes back (optionally
+# streamed). The tests pin the deterministic parts (lookup, retry backoff, SSE
+# decode, translation) with fakes; this file shows what a real run looks like.
+
+# ---------------------------------------------------------------------------
+# 0. Inspect the registry. No network, no key needed.
+# ---------------------------------------------------------------------------
+$ go run . -list
+Known models and aliases (resolve with -model):
+  4o                         -> gpt-4o
+  claude-haiku-4-5           backend=anthropic ctx=200000  format=whole
+  claude-opus-4-7            backend=anthropic ctx=200000  format=diff
+  claude-sonnet-4-6          backend=anthropic ctx=200000  format=diff
+  deepseek                   -> deepseek-chat
+  deepseek-chat              backend=openai    ctx=64000   format=diff
+  deepseek-reasoner          backend=openai    ctx=64000   format=diff
+  gpt-4o                     backend=openai    ctx=128000  format=diff
+  gpt-4o-mini                backend=openai    ctx=128000  format=whole
+  groq                       -> llama-3.3-70b-versatile
+  haiku                      -> claude-haiku-4-5
+  ...
+
+# ---------------------------------------------------------------------------
+# 1. Resolve the `sonnet` alias and send one message, verbosely.
+#    (ANTHROPIC_API_KEY must be set.)
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v -model sonnet "say hi in one short sentence"
+
+# --- stderr (the -v trace) ---
+[s10] model=claude-sonnet-4-6 backend=anthropic url=- ctx=200000 format=diff stream=false
+[s10] retries on: base=125ms cap=32s maxRetries=6
+[s10] stop_reason=end_turn in=14 out=9 tokens
+
+# --- stdout ---
+Hi there, I'm online and ready to help!
+
+# ---------------------------------------------------------------------------
+# 2. Stream the reply (Anthropic backend). Tokens print as they arrive; the
+#    decoder reassembles them into one response under the hood.
+# ---------------------------------------------------------------------------
+$ go run . -model sonnet -stream "count to five"
+One, two, three, four, five.
+
+# ---------------------------------------------------------------------------
+# 3. Swap to an OpenAI-compatible backend. ONLY the config row changes — the
+#    provider boundary translates the wire format; retries wrap it identically.
+# ---------------------------------------------------------------------------
+$ export DEEPSEEK_API_KEY=sk-...
+$ go run . -v -model deepseek "explain a goroutine in one line"
+[s10] model=deepseek-chat backend=openai url=https://api.deepseek.com/v1 ctx=64000 format=diff stream=false
+[s10] retries on: base=125ms cap=32s maxRetries=6
+[s10] stop_reason=end_turn in=17 out=24 tokens
+A goroutine is a lightweight, runtime-scheduled thread you start with the `go` keyword.
+
+# ---------------------------------------------------------------------------
+# 4. Transient failure shape: a 429 (rate limit) or 5xx is retried with
+#    doubling backoff; a 400 (bad request) fails fast. The retry trace below is
+#    what the -v decorator log looks like when the provider returns a 503 twice
+#    before succeeding (illustrative — the live server controls this).
+# ---------------------------------------------------------------------------
+#   anthropic API 503: overloaded
+#   ... retry 1 after 125ms
+#   anthropic API 503: overloaded
+#   ... retry 2 after 250ms
+#   stop_reason=end_turn in=14 out=9 tokens
+#   Hi there!
+
+# ---------------------------------------------------------------------------
+# 5. Unknown model: a typed error that lists the known names, exit code 2.
+# ---------------------------------------------------------------------------
+$ go run . -model gpt-9-ultra "hi"
+unknown model "gpt-9-ultra"; known: 4o, claude-haiku-4-5, claude-opus-4-7, ...
+exit status 2
+
+# ---------------------------------------------------------------------------
+# 6. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s10	0.5s
