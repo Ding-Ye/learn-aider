@@ -82,3 +82,7 @@ Then open http://localhost:3000 .
 ## License
 
 [MIT](./LICENSE)
+
+## Multi-model support
+
+Every chapter that calls an LLM (s01, s10) supports multiple backends through the Provider abstraction: native Anthropic plus any OpenAI-compatible endpoint (DeepSeek / Qwen / Moonshot / Groq / OpenRouter / local vLLM). See the [multi-model guide](docs/en/multi-model.md).

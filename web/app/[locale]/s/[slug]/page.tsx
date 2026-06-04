@@ -76,7 +76,8 @@ export default async function DocPage({
 }
 
 function guessUpstreamFile(slug: string): string | null {
-  // Upstream readings are named <slug>.py (docs/<locale>/<slug>.md →
-  // upstream-readings/<slug>.py). Appendix chapters have a reading too.
+  // Only numbered chapters (sNN-...) ship an annotated upstream excerpt at
+  // upstream-readings/<slug>.py. Integration / appendices / guides don't.
+  if (!/^s\d\d-/.test(slug)) return null;
   return `${slug}.py`;
 }

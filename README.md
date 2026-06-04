@@ -75,3 +75,7 @@ npm run dev
 ## 许可证
 
 [MIT](./LICENSE)
+
+## 多模型支持
+
+所有调用 LLM 的章节（s01、s10）都通过 Provider 抽象支持多家后端：Anthropic 原生 + 任意 OpenAI 兼容端点（DeepSeek / Qwen / Moonshot / Groq / OpenRouter / 本地 vLLM）。详见 [多模型接入指南](docs/zh/multi-model.md)。
