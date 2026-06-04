@@ -1,0 +1,74 @@
+# Example transcript: running s01 on a sample file.
+#
+# This is an ILLUSTRATIVE run, not a byte-exact fixture — the LLM reply is
+# non-deterministic, so what matters is the SHAPE: one round-trip, then one
+# "Applied edit to ..." line. The tests in coder_test.go pin the deterministic
+# parts (parsing, writing) with a fakeProvider; this file shows a learner what a
+# real run looks like.
+
+# ---------------------------------------------------------------------------
+# 0. Set up a sample file to edit.
+# ---------------------------------------------------------------------------
+$ cat > /tmp/hello.go <<'EOF'
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("hello")
+}
+EOF
+
+# ---------------------------------------------------------------------------
+# 1. Run s01 with the verbose flag so we can see the request/response shape.
+#    (ANTHROPIC_API_KEY must be set; or use -provider deepseek etc.)
+# ---------------------------------------------------------------------------
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ go run . -v /tmp/hello.go "add a doc comment above main"
+
+# --- stderr (the -v trace) ---
+[s01] provider=anthropic model=claude-sonnet-4-6 url=
+[s01] sending 62 bytes of /tmp/hello.go + instruction "add a doc comment above main"
+[s01] stop_reason=end_turn in=512 out=78 tokens
+
+# --- stdout ---
+Applied edit to /tmp/hello.go (96 bytes)
+
+# ---------------------------------------------------------------------------
+# 2. Inspect what the model wrote back. The whole file was rewritten; only the
+#    requested change appears, everything else is preserved.
+# ---------------------------------------------------------------------------
+$ cat /tmp/hello.go
+package main
+
+import "fmt"
+
+// main is the program entry point and prints a greeting.
+func main() {
+	fmt.Println("hello")
+}
+
+# ---------------------------------------------------------------------------
+# 3. Try a different provider — nothing else changes (provider translation
+#    happens at the boundary in provider_openai.go).
+# ---------------------------------------------------------------------------
+$ export DEEPSEEK_API_KEY=sk-...
+$ go run . -provider deepseek /tmp/hello.go "rename the function comment to say 'entrypoint'"
+Applied edit to /tmp/hello.go (94 bytes)
+
+# ---------------------------------------------------------------------------
+# 4. Failure shape: if the model replies without a fenced code block, s01
+#    cannot parse an edit. It prints the raw reply and exits non-zero, leaving
+#    the file untouched (no reflection in s01 — that arrives in s09).
+# ---------------------------------------------------------------------------
+$ go run . /tmp/hello.go "this is fine, no changes needed"
+[s01] could not parse an edit from the reply:
+The file already looks correct; no changes are necessary.
+coder error: no fenced code block found in reply
+exit status 1
+
+# ---------------------------------------------------------------------------
+# 5. The deterministic tests (these DO run in CI, no network):
+# ---------------------------------------------------------------------------
+$ go test ./...
+ok  	learn-aider/s01	0.5s
