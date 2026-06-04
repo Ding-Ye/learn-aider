@@ -91,7 +91,7 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "整合：端到端 mini-aider",
       en: "Integration: end-to-end mini-aider",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "appendix-a-repomap-pagerank",
@@ -100,7 +100,7 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "附录 A · RepoMap 的 PageRank 直觉",
       en: "Appendix A · RepoMap PageRank intuition",
     },
-    available: false,
+    available: true,
   },
   {
     slug: "appendix-b-upstream-map",
@@ -109,7 +109,7 @@ export const CURRICULUM: ChapterMeta[] = [
       zh: "附录 B · 上游文件地图",
       en: "Appendix B · Upstream file map",
     },
-    available: false,
+    available: true,
   },
 ];
 

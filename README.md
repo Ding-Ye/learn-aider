@@ -33,9 +33,9 @@ PageRank 的 RepoMap → 检查器与反思循环 → 模型/提供方抽象与�
 | s08 | [RepoMap：tree-sitter 标签 + PageRank](docs/zh/s08-repomap-pagerank.md) | ✅ |
 | s09 | [检查器与反思循环](docs/zh/s09-linter-reflection.md) | ✅ |
 | s10 | [模型/提供方抽象与重试流式](docs/zh/s10-provider-config-retries.md) | ✅ |
-| s_full | 整合：端到端 mini-aider | ⏳ |
-| A | 附录 A · RepoMap 的 PageRank 直觉 | ⏳ |
-| B | 附录 B · 上游文件地图 | ⏳ |
+| s_full | 整合：端到端 mini-aider | ✅ |
+| A | 附录 A · RepoMap 的 PageRank 直觉 | ✅ |
+| B | 附录 B · 上游文件地图 | ✅ |
 
 ✅ 已发布　⏳ 规划中
 

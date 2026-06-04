@@ -37,9 +37,9 @@ streaming → end-to-end integration.
 | s08 | [RepoMap (tags + PageRank under token budget)](docs/en/s08-repomap-pagerank.md) | ✅ |
 | s09 | [Linter + reflection loop](docs/en/s09-linter-reflection.md) | ✅ |
 | s10 | [Model/provider config + retries/streaming](docs/en/s10-provider-config-retries.md) | ✅ |
-| s_full | Integration: end-to-end mini-aider | ⏳ |
-| A | Appendix A · RepoMap PageRank intuition | ⏳ |
-| B | Appendix B · Upstream file map | ⏳ |
+| s_full | Integration: end-to-end mini-aider | ✅ |
+| A | Appendix A · RepoMap PageRank intuition | ✅ |
+| B | Appendix B · Upstream file map | ✅ |
 
 ✅ published　⏳ planned
 
